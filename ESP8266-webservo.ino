@@ -1,5 +1,5 @@
-#define SSID        "KMGZ2"
-#define PASS        "18014c80ec"
+#define SSID        "MyNetwork"
+#define PASS        "password" //aw shit
 #define TIMEOUT     10000 // mS
 
 #include <Servo.h>
@@ -8,8 +8,9 @@
 boolean locked = true;
 
 Servo servo;
-SoftwareSerial E(2, 3); // RX, TX
+SoftwareSerial E(2, 3); // RX, TX //for the module
 
+//serves an html page based on current Locked/unlocked status
 boolean echoPage(int id){
   String stat;
   if(locked)
@@ -26,17 +27,21 @@ boolean echoPage(int id){
   E.print(html);
   return sfind("SEND OK");
 }
-  
+
+//lock
 void lock(){
   locked = true;
   servo.write(160);
 }
 
+//unlock
 void unlock(){
   locked = false;
   servo.write(0);
 }
 
+//read from module serial stream until a String k is found,
+//if not found, timeout in TIMEOUT milliseconds.
 boolean sfind(String k){
   byte current_char = 0;
   byte length = k.length();
@@ -60,6 +65,7 @@ boolean sfind(String k){
   return false;
 }
 
+//try to connect to wifi
 boolean connect_wifi(){
   String cmd = "AT+CWJAP=\""; cmd += SSID; cmd += "\",\""; cmd += PASS; cmd += "\"";
   E.println(cmd);
@@ -131,7 +137,7 @@ void setup(){
   
 //Connect to wifi
   boolean connection_established = false;
-  for(int i=0;i<5;i++)
+  for(int i=0;i<5;i++) //try 5
   {
     Serial.print("Establishing wireless connection... Attempt #");
     Serial.println(i+1);
@@ -141,9 +147,10 @@ void setup(){
       break;
     }
   }
-  if (!connection_established)
+  if (!connection_established){
     Serial.println("Connection could not be established :(");
-  else
+    return; // ?
+  }else
     Serial.println("Successfully connected to wifi!");
     
 //Get the IP
@@ -201,13 +208,14 @@ void loop(){
     Serial.print(r);
     sfind("OK");
     
+    //determine what to do
     if(r == 1){
       Serial.println(" LOCK!");
       lock();
     }else if(r == 0){
       Serial.println(" UNLOCK!");
       unlock();
-    }else if(r == 54){
+    }else if(r == 54){ // 'f'-48 = 54; "GET /favicon.ico"
       Serial.println(" Favicon");
       String closes = "AT+CIPCLOSE="; closes += id;
       E.println(closes);
@@ -216,10 +224,11 @@ void loop(){
       Serial.println();
     }
     
+    //send html page
     if(echoPage(id)){
       Serial.println("Page sent sucessfully");
     }else{
-      Serial.println("Page not sent sucessfully! :)");
+      Serial.println("Page not sent sucessfully! :("); //oops :( not :)
     }
     
     String closes = "AT+CIPCLOSE="; closes += id;
